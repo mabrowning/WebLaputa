@@ -12,8 +12,7 @@ var gl;
 function initGL(canvas) {
 	try {
 		gl = canvas.getContext("experimental-webgl");
-		gl.viewportWidth = canvas.width;
-		gl.viewportHeight = canvas.height;
+		gl.canvas = canvas;
 	} catch (e) {
 	}
 	if (!gl) {
@@ -64,6 +63,8 @@ window.requestAnimFrame = (function(){
 function start() 
 {
 	var canvas = document.getElementById("webGL");
+	canvas.width  = canvas.clientWidth;
+	canvas.height = canvas.clientHeight;
 	initGL(canvas);
 	world = new WLWorld(128);
 	renderer = new WLRenderer(world);
@@ -71,6 +72,7 @@ function start()
 		  requestAnimFrame(animloop);
 		  renderer.draw();
 		})();
+	var loading = document.getElementById("loading");
+	loading.parentNode.removeChild(loading);
 }
-
 

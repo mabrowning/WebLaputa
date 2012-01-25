@@ -22,19 +22,24 @@ function WLChunk(x,y,z,data)
 	this.build_verts(data)
 };
 
-WLChunk.size = 32;
+WLChunk.size = 64;
 
 WLChunk.prototype.getvoxel = function(x,y,z,data)
 {
-	if(x in data && y in data[x] &&z in data[x][y])
-		return data[x][y][z];
-	return VOXEL.AIR;
+	try
+	{
+		return data[x][y][z] || VOXEL.AIR
+	}
+	catch(err)
+	{
+		return VOXEL.AIR;
+	}
 }
 
 WLChunk.prototype.getheight =function(z,heights)
 {
 	for(i in heights)
-		if (Math.abs(z - heights[i]) <= 2 )
+		if (Math.abs(z - heights[i]) < 2 )
 			return heights[i];
 	return z-1;
 }
@@ -65,6 +70,10 @@ WLChunk.prototype.build_verts = function(data)
 
 	var chunksize = WLChunk.size;
 	var heights = new Array();
+
+
+	//xi, yi and zi in terms of voxels index IN this chunk.
+	//x , y  and z  in terms of global voxel position.
 	for(xi=-1;xi<=chunksize;xi++)
 	{
 		var x = this.x + xi;
@@ -73,14 +82,14 @@ WLChunk.prototype.build_verts = function(data)
 		{
 			var y = this.y + yi;
 			heights[xi+1][yi+1] = new Array();
-			var b = this.getvoxel(x,y,this.z + chunksize,data);
-			for(zi=chunksize-1;zi>=-1;zi--)
+			var b = this.getvoxel(x,y,this.z - 2,data);
+			for(zi=-1;zi<=chunksize+1;zi++)
 			{
 				var z = this.z + zi;
 
 				var lastb = b;
 				b = this.getvoxel(x,y,z,data);
-				if(b == VOXEL.DIRT && lastb != VOXEL.DIRT)
+				if(b != VOXEL.DIRT && lastb == VOXEL.DIRT)
 				{
 					//zi+1 because the mesh is on the top of the block
 					heights[xi+1][yi+1].push(zi+1); 
@@ -88,6 +97,9 @@ WLChunk.prototype.build_verts = function(data)
 			}
 		}
 	}
+
+	//Now that we have the heightmap of the top of the terrain, vertex it!
+	this.heights = heights;
 	for(x=1; x<heights.length-1; x++)
 	{
 		for(y=1; y<heights[x].length-1; y++)
@@ -95,6 +107,12 @@ WLChunk.prototype.build_verts = function(data)
 			for(i in heights[x][y])
 			{
 				var h = heights[x][y][i];
+				//This heightmap has neighbors... make sure we don't 
+				//draw those
+				if(h>chunksize || h<0)
+				{
+					continue;
+				}
 				/*
 				This face(h) has neighors(voxels) with height:
 
@@ -124,6 +142,8 @@ WLChunk.prototype.build_verts = function(data)
 				var  qs = 0.25*s;
 				var  qw = 0.25*w;
 				var  qe = 0.25*e;
+
+				//TODO: MORE SmOoThInG!
 
 				var zp = new Array();
 				var weights = 

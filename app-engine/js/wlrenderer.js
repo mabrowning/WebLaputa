@@ -43,7 +43,7 @@ WLRenderer = function(world) {
 	this.uMVMatrix  = gl.getUniformLocation(this.program, "uMVMatrix");
 
     this.mvMatrix   = mat4.create();
-    this.tranMatrix = vec3.create();
+    this.camPos = vec3.create();
 	this.rotVec     = vec3.create();
 	mat4.identity(this.mvMatrix);
 
@@ -66,22 +66,41 @@ WLRenderer = function(world) {
 	document.addEventListener("mousedown", function(e){that.mousedown(e)}, false);
 	document.addEventListener("mouseup",   function(e){that.mouseup(e)},   false);
 	document.addEventListener("mousemove", function(e){that.mousemove(e)}, false);
+	window.addEventListener  ("resize",    function(){that.resize()},      false);
 
-	//gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-	mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 1000.0, this.pMatrix);
-	gl.uniformMatrix4fv(this.uPMatrix, false, this.pMatrix);
 
-	this.tranMatrix.set([0,-world.xsize,-world.xsize]);
+	this.camPos.set([0,world.xsize,world.xsize]);
 	this.rotVec.set([-0.92, -0.66, 0]); //chosen arbitrarily by looking a good view.
 
-	this.rend = new Date().getTime();
+	this.tick = new Date().getTime();
 
+	this.resize();
+
+	this.line = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER,this.line);
+	gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,0,0,0,0]),gl.STATIC_DRAW);
+}
+
+WLRenderer.prototype.resize =function()
+{
+	gl.viewportWidth  = gl.canvas.clientWidth;
+	gl.viewportHeight = gl.canvas.clientHeight;
+	gl.canvas.height  = gl.viewportHeight;
+	gl.canvas.width   = gl.viewportWidth;
+	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+	mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 1000.0, this.pMatrix);
+	gl.uniformMatrix4fv(this.uPMatrix, false, this.pMatrix);
+	this.dirty = true;
 }
 
 WLRenderer.prototype.draw = function() 
 {
 
 	this.do_movement();
+
+	if(!this.dirty)
+		return;
+	this.dirty = false;
 
 	var world = this.world;
 
@@ -112,6 +131,13 @@ WLRenderer.prototype.draw = function()
 		gl.drawElements(gl.TRIANGLES,mesh.icount,gl.UNSIGNED_SHORT,0);
 	}
 
+	gl.uniform3f(this.uLightSpCol, 0.16,0.32,0.64);
+
+	gl.bindBuffer(gl.ARRAY_BUFFER,this.line);
+	gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 12, 0);
+	gl.drawArrays(gl.LINES,0,2);
+
+
 	/*
 	for(x=0;x<world.xchunk;x++)
 	{
@@ -141,25 +167,32 @@ WLRenderer.prototype.draw = function()
 
 WLRenderer.prototype.do_movement = function()
 {
-	this.oldrend = this.rend;
-	this.rend = new Date().getTime();
-	var millielapsed = this.rend - this.oldrend;
-	if(this.oldmouse)
+	this.lasttick = this.tick;
+	this.tick = new Date().getTime();
+	var millielapsed = this.tick - this.lasttick;
+	if(this.mouseold)
 	{
-		var x = this.oldmouse[0] - this.mousepos[0];
-		var y = this.oldmouse[1] - this.mousepos[1];
-		if(x)
-			this.rotVec[0] += x/200 //Yaw; 
-		if(y)
+		var x = this.mouseold[0] - this.mousepos[0];
+		var y = this.mouseold[1] - this.mousepos[1];
+		if(this.mousemotion || Math.abs(x) > 3)
 		{
-			this.rotVec[1] += y/200; //Pitch
+			this.rotVec[0] += x/400 //Yaw; 
+			this.dirty = true;
+			this.mousemotion = true;
+		}
+		if(this.mousemotion || Math.abs(y) > 3)
+		{
+			this.rotVec[1] += y/400; //Pitch
 			if(this.rotVec[1] >  Math.PI/2) this.rotVec[1] =  Math.PI/2;
 			if(this.rotVec[1] < -Math.PI/2) this.rotVec[1] = -Math.PI/2;
+			this.dirty = true;
+			this.mousemotion = true;
 		}
 
 	}
 
-	this.oldmouse = this.mousepos;
+	if(this.mousemotion)
+		this.mouseold = this.mousepos;
 
 	var move = [0,0,0];
 	if(this.keys[87]) //W
@@ -198,17 +231,44 @@ WLRenderer.prototype.do_movement = function()
 		move[1] -=                              Math.cos( this.rotVec[1] );
 	}
 	vec3.normalize(move);
-	vec3.scale(move,0.05*millielapsed);
+	if(move[0] || move[1] || move[2])
+	{
+		this.dirty = true;
+	}
+	if(!this.dirty)
+	{
+		return;
+	}
 
-	vec3.add(this.tranMatrix,move);
+	var colldetect = vec3.add(vec3.scale(move,-0.5*millielapsed,vec3.create()),this.camPos);
+	if(world.getvoxel(Math.floor(colldetect[0]),
+					  Math.floor(colldetect[2]),
+					  Math.floor(colldetect[1])) == VOXEL.AIR)
+	{
+		vec3.scale(move,-0.05*millielapsed);
+		vec3.add(this.camPos,move);
+	}
 
 	mat4.identity(this.mvMatrix);
 
 	mat4.rotateX(this.mvMatrix,-this.rotVec[1]);
 	mat4.rotateY(this.mvMatrix,-this.rotVec[0]);
 
-	mat4.translate(this.mvMatrix,this.tranMatrix);
+	mat4.translate(this.mvMatrix,vec3.scale(this.camPos,-1,vec3.create()));
 	gl.uniformMatrix4fv(this.uMVMatrix, false, this.mvMatrix);
+}
+
+WLRenderer.prototype.click = function(e)
+{
+	var view = [0,gl.viewportHeight,gl.viewportWidth,-gl.viewportHeight]
+	var ray0 = vec3.unproject([e.clientX,e.clientY,0],this.mvMatrix,this.pMatrix,view,vec3.create());
+	var ray1 = vec3.unproject([e.clientX,e.clientY,1],this.mvMatrix,this.pMatrix,view,vec3.create());
+
+	gl.bindBuffer(gl.ARRAY_BUFFER,this.line);
+	gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([ray0[0],ray0[1],ray0[2],ray1[0],ray1[1],ray1[2]]),gl.STATIC_DRAW);
+
+	this.dirty = true;
+
 }
 
 
@@ -225,13 +285,20 @@ WLRenderer.prototype.keyup = function(e)
 WLRenderer.prototype.mouseup = function(e)
 {
 	this.mousedrag = false;
-	delete this.oldmouse;
+	delete this.mouseold;
 	delete this.mousepos;
+	if(!this.mousemotion)
+	{
+		this.click(e);
+	}
 }
 
 WLRenderer.prototype.mousedown = function(e)
 {
+	this.mouseold = [ e.clientX, e.clientY ];
+	this.mousepos = this.mouseold;
 	this.mousedrag = true;
+	this.mousemotion = false;
 }
 
 WLRenderer.prototype.mousemove = function(e)
@@ -241,10 +308,6 @@ WLRenderer.prototype.mousemove = function(e)
 		this.mousepos = [ e.clientX, e.clientY ];
 	}
 }
-
-
-
-
 
 WLRenderer.prototype.getShader = function (id) {
 	var shaderScript = document.getElementById(id);
@@ -280,3 +343,4 @@ WLRenderer.prototype.getShader = function (id) {
 
 	return shader;
 }
+

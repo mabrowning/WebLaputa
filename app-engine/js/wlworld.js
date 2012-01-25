@@ -31,10 +31,10 @@ function WLWorld(size)
 			data[x][y] = new Array();
 			for(z=0;z<this.zchunk * chunksize;z++)
 			{
-				cos = Math.cos(Math.PI/3)
-				sin = Math.sin(Math.PI/3)
-				co2 = Math.cos(Math.PI/2.20)
-				si2 = Math.sin(Math.PI/2.20)
+				cos = Math.cos(Math.PI/5)
+				sin = Math.sin(Math.PI/5)
+				co2 = Math.cos(Math.PI/4)
+				si2 = Math.sin(Math.PI/4)
 				xp = x - size/2
 				yp = y - size/2;
 				zp = size/4 -z+1 ;
@@ -66,11 +66,11 @@ function WLWorld(size)
 		}
 	}
 
-							var ground = gl.createBuffer();
-							ground.vcount = dirts.length/3;
-		gl.bindBuffer(gl.ARRAY_BUFFER,ground);
-		gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(dirts),gl.STATIC_DRAW);
-							this.ground.push(ground);
+	var ground = gl.createBuffer();
+	ground.vcount = dirts.length/3;
+	gl.bindBuffer(gl.ARRAY_BUFFER,ground);
+	gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(dirts),gl.STATIC_DRAW);
+	this.ground.push(ground);
 
 	this.data = data;
 	var chunk = new Array();
@@ -92,37 +92,8 @@ function WLWorld(size)
 		for(y=0;y<this.ychunk;y++)
 			for(z=0;z<this.zchunk;z++)
 			{
-				var norms = [];
-				this.addnorm(norms,x-1,y-1,z-1);
-				this.addnorm(norms,x  ,y-1,z-1);
-				this.addnorm(norms,x+1,y-1,z-1);
-				this.addnorm(norms,x-1,y  ,z-1);
-				this.addnorm(norms,x  ,y  ,z-1);
-				this.addnorm(norms,x+1,y  ,z-1);
-				this.addnorm(norms,x-1,y+1,z-1);
-				this.addnorm(norms,x  ,y+1,z-1);
-				this.addnorm(norms,x+1,y+1,z-1);
 
-				this.addnorm(norms,x-1,y-1,z  );
-				this.addnorm(norms,x  ,y-1,z  );
-				this.addnorm(norms,x+1,y-1,z  );
-				this.addnorm(norms,x-1,y  ,z  );
-		//		this.addnorm(norms,x  ,y  ,z  );
-				this.addnorm(norms,x+1,y  ,z  );
-				this.addnorm(norms,x-1,y+1,z  );
-				this.addnorm(norms,x  ,y+1,z  );
-				this.addnorm(norms,x+1,y+1,z  );
-
-				this.addnorm(norms,x-1,y-1,z+1);
-				this.addnorm(norms,x  ,y-1,z+1);
-				this.addnorm(norms,x+1,y-1,z+1);
-				this.addnorm(norms,x-1,y  ,z+1);
-				this.addnorm(norms,x  ,y  ,z+1);
-				this.addnorm(norms,x+1,y  ,z+1);
-				this.addnorm(norms,x-1,y+1,z+1);
-				this.addnorm(norms,x  ,y+1,z+1);
-				this.addnorm(norms,x+1,y+1,z+1);
-
+				var norms = this.collectnorms(x,y,z);
 				chunk[x][y][z].build_mesh(norms);
 				if(chunk[x][y][z].vboTop.icount > 0)
 				{
@@ -138,6 +109,40 @@ WLWorld.prototype.addnorm = function(norms,x,y,z)
 		norms.push(this.chunks[x][y][z].norms);
 	}
 	catch(err){}
+}
+WLWorld.prototype.collectnorms = function(x,y,z)
+{
+	var norms = [];
+	this.addnorm(norms,x-1,y-1,z-1);
+	this.addnorm(norms,x  ,y-1,z-1);
+	this.addnorm(norms,x+1,y-1,z-1);
+	this.addnorm(norms,x-1,y  ,z-1);
+	this.addnorm(norms,x  ,y  ,z-1);
+	this.addnorm(norms,x+1,y  ,z-1);
+	this.addnorm(norms,x-1,y+1,z-1);
+	this.addnorm(norms,x  ,y+1,z-1);
+	this.addnorm(norms,x+1,y+1,z-1);
+
+	this.addnorm(norms,x-1,y-1,z  );
+	this.addnorm(norms,x  ,y-1,z  );
+	this.addnorm(norms,x+1,y-1,z  );
+	this.addnorm(norms,x-1,y  ,z  );
+//	this.addnorm(norms,x  ,y  ,z  );
+	this.addnorm(norms,x+1,y  ,z  );
+	this.addnorm(norms,x-1,y+1,z  );
+	this.addnorm(norms,x  ,y+1,z  );
+	this.addnorm(norms,x+1,y+1,z  );
+
+	this.addnorm(norms,x-1,y-1,z+1);
+	this.addnorm(norms,x  ,y-1,z+1);
+	this.addnorm(norms,x+1,y-1,z+1);
+	this.addnorm(norms,x-1,y  ,z+1);
+	this.addnorm(norms,x  ,y  ,z+1);
+	this.addnorm(norms,x+1,y  ,z+1);
+	this.addnorm(norms,x-1,y+1,z+1);
+	this.addnorm(norms,x  ,y+1,z+1);
+	this.addnorm(norms,x+1,y+1,z+1);
+	return norms;
 }
 
 WLWorld.prototype.onupdateblock = function(x,y,z) 
@@ -155,3 +160,16 @@ WLWorld.prototype.onupdateblock = function(x,y,z)
 		this.meshes.push(chunk.vboTop);
 	}
 }
+
+WLWorld.prototype.getvoxel = function(x,y,z)
+{
+	try
+	{
+		return this.data[x][y][z] || VOXEL.AIR;
+	}
+	catch(err)
+	{
+		return VOXEL.AIR;
+	}
+}
+
