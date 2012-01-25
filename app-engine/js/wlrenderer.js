@@ -34,10 +34,10 @@ WLRenderer = function(world) {
 	this.uLightSpCol = gl.getUniformLocation(this.program, "uLightSpCol");
 	this.uLightDiCol = gl.getUniformLocation(this.program, "uLightDiCol");
 
-	gl.uniform3f(this.uLightPos,   false, 40,40,40);
-	gl.uniform3f(this.uLightAmCol, false, 0.7,0.7,0.6);
-	gl.uniform3f(this.uLightSpCol, false, 1.0,1.0,1.0);
-	gl.uniform3f(this.uLightDiCol, false, 0.9,0.9,0.8);
+	gl.uniform3f(this.uLightPos,     40, 40, 40);
+	gl.uniform3f(this.uLightAmCol,  0.7,0.7,0.6);
+	gl.uniform3f(this.uLightSpCol,  1.0,1.0,1.0);
+	gl.uniform3f(this.uLightDiCol,  0.9,0.9,0.8);
 
 	this.uPMatrix   = gl.getUniformLocation(this.program, "uPMatrix");
 	this.uMVMatrix  = gl.getUniformLocation(this.program, "uMVMatrix");
@@ -51,9 +51,9 @@ WLRenderer = function(world) {
 
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);
 	gl.enable(gl.DEPTH_TEST);
-	gl.enable(gl.CULL_FACE);
-	gl.cullFace(gl.BACK);
-	gl.frontFace(gl.CW);
+	//gl.enable(gl.CULL_FACE);
+	//gl.cullFace(gl.BACK);
+	//gl.frontFace(gl.CW);
 
 	this.world = world;
 
@@ -86,6 +86,18 @@ WLRenderer.prototype.draw = function()
 	var world = this.world;
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+	gl.uniform3f(this.uLightSpCol, 0.64,0.32,0.16);
+
+	for(i in world.ground)
+	{
+		gl.bindBuffer(gl.ARRAY_BUFFER, world.ground[i]);
+		gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 12, 0);
+		gl.drawArrays(gl.POINTS,0,world.ground[i].vcount);
+	}
+
+	gl.uniform3f(this.uLightSpCol, 0.1, 0.6, 0.1);
+
 	for(i in world.meshes)
 	{
 		var mesh = world.meshes[i];
@@ -99,6 +111,7 @@ WLRenderer.prototype.draw = function()
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.ibo)
 		gl.drawElements(gl.TRIANGLES,mesh.icount,gl.UNSIGNED_SHORT,0);
 	}
+
 	/*
 	for(x=0;x<world.xchunk;x++)
 	{

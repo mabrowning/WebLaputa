@@ -9,18 +9,20 @@
 
 function WLChunk(x,y,z,data)
 {
-	var chunksize = WLChunk.size;
-	this.vboTop   = gl.createBuffer();
+	this.vboTop       = gl.createBuffer();
 	this.vboTop.ibo   = gl.createBuffer();
-	this.vboSides = gl.createBuffer();
-	this.iboSides = gl.createBuffer();
+	this.vboSides     = gl.createBuffer();
+	this.vboSides.ibo = gl.createBuffer();
+
+	var chunksize = WLChunk.size;
 	this.x = x * chunksize;
 	this.y = y * chunksize;
 	this.z = z * chunksize;
-	this.hasmesh = this.rebuild(data);
+
+	this.build_verts(data)
 };
 
-WLChunk.size = 16;
+WLChunk.size = 32;
 
 WLChunk.prototype.getvoxel = function(x,y,z,data)
 {
@@ -34,15 +36,15 @@ WLChunk.prototype.getheight =function(z,heights)
 	for(i in heights)
 		if (Math.abs(z - heights[i]) <= 2 )
 			return heights[i];
-	return 0;
+	return z-1;
 }
 
 WLChunk.prototype.addnorm = function(norms,pos,norm)
 {
-	var chunksize = WLChunk.size;
-
+	var pos2 = [];
+	vec3.add(pos,[this.x,this.y,this.z],pos2);
 	//Hash the vertex position
-	var i = pos.join("|");
+	var i = pos2.join("|");
 
 	//Add or add the norm.
 	if( i in norms)
@@ -52,9 +54,15 @@ WLChunk.prototype.addnorm = function(norms,pos,norm)
 	return i;
 }
 
-
-WLChunk.prototype.rebuild = function(data)
+WLChunk.prototype.build_verts = function(data)
 {
+	//norms Will store hashed verex positions mapping to their unnormalized
+	//normals ;)
+	this.norms = {}; 
+
+	//Indices will store hashed vertex positions in gl.TRIANGLES order.
+	this.indices = new Array();
+
 	var chunksize = WLChunk.size;
 	var heights = new Array();
 	for(xi=-1;xi<=chunksize;xi++)
@@ -74,14 +82,12 @@ WLChunk.prototype.rebuild = function(data)
 				b = this.getvoxel(x,y,z,data);
 				if(b == VOXEL.DIRT && lastb != VOXEL.DIRT)
 				{
-					heights[xi+1][yi+1].push(zi+1); //zi+1 because the mesh is on the top of the block
+					//zi+1 because the mesh is on the top of the block
+					heights[xi+1][yi+1].push(zi+1); 
 				}
 			}
 		}
 	}
-	this.heights = heights;
-	var norms = {}; //Will store hashed verex positions mapping to their unnormalized normals ;)
-	var indices = new Array();
 	for(x=1; x<heights.length-1; x++)
 	{
 		for(y=1; y<heights[x].length-1; y++)
@@ -90,7 +96,7 @@ WLChunk.prototype.rebuild = function(data)
 			{
 				var h = heights[x][y][i];
 				/*
-				This face(h) has neighors(voxels) with height of the following:
+				This face(h) has neighors(voxels) with height:
 
 				+--+--+--+    6=w+nw+n+h/4  7=n+h/2 8=n+ne+e+h/4
 				|nw| n|ne| 
@@ -129,7 +135,8 @@ WLChunk.prototype.rebuild = function(data)
 				zp[6] = (w+nw+n+h) / 4;
 				zp[7] = (qw+qe+qnw+qne+n+h) / 3;
 				zp[8] = (e+ne+n+h) / 4;
-				zp[4] = (zp[0] + zp[1] + zp[2] + zp[3] + zp[5] + zp[6] + zp[7] +zp[8] + h)/9;
+				zp[4] = (zp[0] + zp[1] + zp[2] + zp[3] + 
+						 zp[5] + zp[6] + zp[7] + zp[8] + h)/9;
 
 				var xp = new Array();
 				xp[0] = xp[3] = xp[6] = x;
@@ -148,24 +155,25 @@ WLChunk.prototype.rebuild = function(data)
 				+-+-+ --> 3-4-5  --> +--+--+
 				|/|/|     |/|/|      |0/|2/|
 				+-+-+     0-1-2      |/1|/3|
-				Triangles are indexed by vertex: 043, 014, 154, 125, 376, 347, 487, 458
+				Triangles are indexed by vertex so that diagonal always
+				traces largest change in height: 
 
 				*/
 
 				var tris = [ ];
-				if ( Math.abs(zp[4] - zp[0]) < Math.abs(zp[1] - zp[3]) )
+				if ( Math.abs(zp[4] - zp[0]) >= Math.abs(zp[1] - zp[3]) )
 					tris = tris.concat([[0,1,3], [1,4,3]]);
 				else
 					tris = tris.concat([[0,4,3], [0,1,4]]);
-				if ( Math.abs(zp[4] - zp[2]) < Math.abs( zp[1] - zp[5]) )
+				if ( Math.abs(zp[4] - zp[2]) >= Math.abs( zp[1] - zp[5]) )
 					tris = tris.concat([[1,5,4], [1,2,5]]);
 				else
 					tris = tris.concat([[1,2,4], [2,5,4]]);
-				if ( Math.abs(zp[4] - zp[6]) < Math.abs(zp[3] -zp[7]) )
+				if ( Math.abs(zp[4] - zp[6]) >= Math.abs(zp[3] -zp[7]) )
 					tris = tris.concat([[3,7,6], [3,4,7]]);
 				else
 					tris = tris.concat([[4,6,3], [4,7,6]]);
-				if ( Math.abs(zp[4] - zp[8]) < Math.abs(zp[5] - zp[7]) )
+				if ( Math.abs(zp[4] - zp[8]) >= Math.abs(zp[5] - zp[7]) )
 					tris = tris.concat([[5,8,7], [5,7,4]]);
 				else
 					tris = tris.concat([[4,8,7], [4,5,8]]);
@@ -182,31 +190,47 @@ WLChunk.prototype.rebuild = function(data)
 					vec3.subtract(p2,p0,v);
 					var norm = vec3.cross(u,v);
 
-					indices.push(this.addnorm(norms,p0,norm));
-					indices.push(this.addnorm(norms,p1,norm));
-					indices.push(this.addnorm(norms,p2,norm));
+					this.indices.push(this.addnorm(this.norms,p0,norm));
+					this.indices.push(this.addnorm(this.norms,p1,norm));
+					this.indices.push(this.addnorm(this.norms,p2,norm));
 				}
 			}
 		}
 	}
+}
+
+WLChunk.prototype.build_mesh = function(neigh_norms)
+{
 
 	//Build VBO for top mesh.
 	var arrTop = new Array();
 	var vcount = 0;
 	var vIndices = {};
-	for( norm in norms )
+	for( key in this.norms )
 	{
-		vIndices[norm] = vcount;
+		vIndices[key] = vcount;
 
-		var pos = norm.split("|");
+		var pos = key.split("|");
 		var x = parseFloat(pos[0]);
 		var y = parseFloat(pos[1]);
 		var z = parseFloat(pos[2]);
 
-		arrTop.push(x+this.x);
-		arrTop.push(z+this.z);
-		arrTop.push(y+this.y);
-		var norm = norms[norm];
+		arrTop.push(x);
+		arrTop.push(z);
+		arrTop.push(y);
+		var norm = this.norms[key];
+		
+		//Check if this vertex is on the edge
+			//We might need to add up neighbor normals, too
+			for(i in neigh_norms)
+			{
+				n = neigh_norms[i][key];
+				if(n)
+				{
+					vec3.add(norm,n);
+				}
+			}
+
 		vec3.normalize(norm);
 		arrTop.push(norm[0]);
 		arrTop.push(norm[2]);
@@ -220,10 +244,10 @@ WLChunk.prototype.rebuild = function(data)
 	var arrTopInd = new Array();
 	//Build Vertex indices
 	var icount = 0;
-	for( i in indices )
+	for( i in this.indices )
 	{
 		//Each ind is a hashed vertex. The mapping from hash to vertex index is vIndices
-		arrTopInd.push(vIndices[indices[i]]);
+		arrTopInd.push(vIndices[this.indices[i]]);
 		icount++;
 	}
 	this.vboTop.icount = icount;

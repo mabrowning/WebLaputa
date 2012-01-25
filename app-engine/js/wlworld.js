@@ -19,6 +19,9 @@ function WLWorld(size)
 	this.ychunk = Math.floor((size - 1)/chunksize) + 1;
 	this.zchunk = Math.floor((size - 1)/chunksize) + 1;
 
+
+	var dirts = new Array();
+	this.ground = new Array();
 	var data = new Array();
 	for(x=0;x<this.xchunk * chunksize ;x++)
 	{
@@ -28,25 +31,47 @@ function WLWorld(size)
 			data[x][y] = new Array();
 			for(z=0;z<this.zchunk * chunksize;z++)
 			{
-				cos = Math.cos(Math.PI/8)
-				sin = Math.sin(Math.PI/8)
+				cos = Math.cos(Math.PI/3)
+				sin = Math.sin(Math.PI/3)
+				co2 = Math.cos(Math.PI/2.20)
+				si2 = Math.sin(Math.PI/2.20)
 				xp = x - size/2
 				yp = y - size/2;
-				if( (xp*xp + yp*yp ) * cos * cos - z * z * sin * sin  < 0 )
+				zp = size/4 -z+1 ;
+				if((xp*xp + yp*yp ) * cos * cos -  z *  z * sin * sin  <= 0)
 				{
+					if(z > size/4+1 && (xp*xp + yp*yp )*co2 * co2 -zp*zp* si2*si2 <= 0)
+					{
+						data[x][y][z] = VOXEL.AIR
+						continue;
+					}
 
-					if( z > size/2 + 1)
-						data[x][y][z] = VOXEL.AIR;
-					else if( z > size/2  && Math.random() > 0.1)
-						data[x][y][z] = VOXEL.AIR;
-					else
 						data[x][y][z] = VOXEL.DIRT;
-				}
+						if(dirts.length > 1200)
+						{
+							var ground = gl.createBuffer();
+							ground.vcount = dirts.length/3;
+		gl.bindBuffer(gl.ARRAY_BUFFER,ground);
+		gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(dirts),gl.STATIC_DRAW);
+							this.ground.push(ground);
+							dirts = new Array();
+						}
+						dirts.push(x+1.5);
+						dirts.push(z);
+						dirts.push(y+1.5);
+					}
 				else
 					data[x][y][z] = VOXEL.AIR
 			}
 		}
 	}
+
+							var ground = gl.createBuffer();
+							ground.vcount = dirts.length/3;
+		gl.bindBuffer(gl.ARRAY_BUFFER,ground);
+		gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(dirts),gl.STATIC_DRAW);
+							this.ground.push(ground);
+
 	this.data = data;
 	var chunk = new Array();
 	this.meshes = new Array();
@@ -59,14 +84,60 @@ function WLWorld(size)
 			for(z=0;z<this.zchunk;z++)
 			{
 				chunk[x][y][z] = new WLChunk(x,y,z,data);
+			}
+		}
+	}
+	this.chunks = chunk;
+	for(x=0;x<this.xchunk;x++)
+		for(y=0;y<this.ychunk;y++)
+			for(z=0;z<this.zchunk;z++)
+			{
+				var norms = [];
+				this.addnorm(norms,x-1,y-1,z-1);
+				this.addnorm(norms,x  ,y-1,z-1);
+				this.addnorm(norms,x+1,y-1,z-1);
+				this.addnorm(norms,x-1,y  ,z-1);
+				this.addnorm(norms,x  ,y  ,z-1);
+				this.addnorm(norms,x+1,y  ,z-1);
+				this.addnorm(norms,x-1,y+1,z-1);
+				this.addnorm(norms,x  ,y+1,z-1);
+				this.addnorm(norms,x+1,y+1,z-1);
+
+				this.addnorm(norms,x-1,y-1,z  );
+				this.addnorm(norms,x  ,y-1,z  );
+				this.addnorm(norms,x+1,y-1,z  );
+				this.addnorm(norms,x-1,y  ,z  );
+		//		this.addnorm(norms,x  ,y  ,z  );
+				this.addnorm(norms,x+1,y  ,z  );
+				this.addnorm(norms,x-1,y+1,z  );
+				this.addnorm(norms,x  ,y+1,z  );
+				this.addnorm(norms,x+1,y+1,z  );
+
+				this.addnorm(norms,x-1,y-1,z+1);
+				this.addnorm(norms,x  ,y-1,z+1);
+				this.addnorm(norms,x+1,y-1,z+1);
+				this.addnorm(norms,x-1,y  ,z+1);
+				this.addnorm(norms,x  ,y  ,z+1);
+				this.addnorm(norms,x+1,y  ,z+1);
+				this.addnorm(norms,x-1,y+1,z+1);
+				this.addnorm(norms,x  ,y+1,z+1);
+				this.addnorm(norms,x+1,y+1,z+1);
+
+				chunk[x][y][z].build_mesh(norms);
 				if(chunk[x][y][z].vboTop.icount > 0)
 				{
 					this.meshes.push(chunk[x][y][z].vboTop);
 				}
 			}
-		}
+}
+
+WLWorld.prototype.addnorm = function(norms,x,y,z)
+{
+	try
+	{
+		norms.push(this.chunks[x][y][z].norms);
 	}
-	this.chunks = chunk;
+	catch(err){}
 }
 
 WLWorld.prototype.onupdateblock = function(x,y,z) 
@@ -74,9 +145,13 @@ WLWorld.prototype.onupdateblock = function(x,y,z)
 	var xc = x/ WLChunk.size;
 	var yc = y/ WLChunk.size;
 	var zc = z/ WLChunk.size;
-	var add = this.chunks[x][y][z].rebuild(this.data);
-	if(chunk[x][y][z].vboTop.icount > 0)
+
+	var chunk = this.chunks[xc][yc][zc];
+	chunk.build_verts(this.data);
+	//TODO: figure out if we need to update multiple chunks.
+	chunk.build_mesh( null );
+	if(chunk.vboTop.icount > 0)
 	{
-		this.meshes.push(chunk[x][y][z].vboTop);
+		this.meshes.push(chunk.vboTop);
 	}
 }

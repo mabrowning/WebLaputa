@@ -52,7 +52,7 @@
         if (uUseTextures) {
             fragmentColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
         } else {
-            fragmentColor = vec4(0.1, 0.6, 0.1, 1.0);
+            fragmentColor = vec4(uLightSpCol.rgb, 1.0 );
         }
         gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
     }
@@ -76,10 +76,9 @@
     void main(void) {
         vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
         gl_Position = uPMatrix * vPosition;
-		gl_PointSize = 2.0;
+		gl_PointSize = 12.0;
         vTextureCoord = aTextureCoord;
-//        vTransformedNormal = uNMatrix * aVertexNormal;
-        vTransformedNormal = aVertexNormal;
+        vTransformedNormal = vec3(uMVMatrix * vec4(aVertexNormal,0.0));
     }
 </script>
 	</head>
