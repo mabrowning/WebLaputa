@@ -22,7 +22,7 @@ function WLChunk(x,y,z,data)
 	this.build_verts(data)
 };
 
-WLChunk.size = 64;
+WLChunk.size = 16;
 
 WLChunk.prototype.getvoxel = function(x,y,z,data)
 {
@@ -92,7 +92,7 @@ WLChunk.prototype.build_verts = function(data)
 				if(b != VOXEL.DIRT && lastb == VOXEL.DIRT)
 				{
 					//zi+1 because the mesh is on the top of the block
-					heights[xi+1][yi+1].push(zi+1); 
+					heights[xi+1][yi+1].push(zi); 
 				}
 			}
 		}
@@ -159,14 +159,14 @@ WLChunk.prototype.build_verts = function(data)
 						 zp[5] + zp[6] + zp[7] + zp[8] + h)/9;
 
 				var xp = new Array();
-				xp[0] = xp[3] = xp[6] = x;
-				xp[1] = xp[4] = xp[7] = x + 0.5;
-				xp[2] = xp[5] = xp[8] = x + 1.0;
+				xp[0] = xp[3] = xp[6] = x - 1.0;
+				xp[1] = xp[4] = xp[7] = x - 0.5;
+				xp[2] = xp[5] = xp[8] = x ;
 
 				var yp = new Array();
-				yp[0] = yp[1] = yp[2] = y;
-				yp[3] = yp[4] = yp[5] = y + 0.5;
-				yp[6] = yp[7] = yp[8] = y + 1.0;
+				yp[0] = yp[1] = yp[2] = y - 1.0;
+				yp[3] = yp[4] = yp[5] = y - 0.5;
+				yp[6] = yp[7] = yp[8] = y;
 
 				/*
 				This face is made up of the following triangles:
@@ -219,7 +219,7 @@ WLChunk.prototype.build_verts = function(data)
 	}
 }
 
-WLChunk.prototype.build_mesh = function(neigh_norms)
+WLChunk.prototype.build_mesh = function(neighs)
 {
 
 	//Build VBO for top mesh.
@@ -242,9 +242,13 @@ WLChunk.prototype.build_mesh = function(neigh_norms)
 		
 		//Check if this vertex is on the edge
 			//We might need to add up neighbor normals, too
-			for(i in neigh_norms)
+			for(i in neighs)
 			{
-				n = neigh_norms[i][key];
+				if(this == neighs[i])
+				{
+					continue;
+				}
+				n = neighs[i].norms[key];
 				if(n)
 				{
 					vec3.add(norm,n);

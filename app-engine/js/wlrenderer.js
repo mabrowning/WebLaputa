@@ -76,9 +76,65 @@ WLRenderer = function(world) {
 
 	this.resize();
 
+	/*
 	this.line = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER,this.line);
 	gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,0,0,0,0]),gl.STATIC_DRAW);
+	*/
+
+	var cube = [
+		// Top
+		0, 0, 1, 0, 0, 1, 
+		1, 0, 1, 0, 0, 1, 
+		1, 1, 1, 0, 0, 1, 
+		1, 1, 1, 0, 0, 1, 
+		0, 1, 1, 0, 0, 1, 
+		0, 0, 1, 0, 0, 1, 
+		
+		// Bottom
+		0, 0, 0, 0, 0, -1,
+		0, 1, 0, 0, 0, -1,
+		1, 1, 0, 0, 0, -1,
+		1, 1, 0, 0, 0, -1,
+		1, 0, 0, 0, 0, -1,
+		0, 0, 0, 0, 0, -1,
+		
+		// Front 
+		0, 0, 1, 0, -1, 0,
+		0, 0, 0, 0, -1, 0,
+		1, 0, 0, 0, -1, 0,
+		1, 0, 0, 0, -1, 0,
+		1, 0, 1, 0, -1, 0,
+		0, 0, 1, 0, -1, 0,
+		
+		// Rear	 
+		0, 1, 1, 0, 1, 0,
+		1, 1, 1, 0, 1, 0,
+		1, 1, 0, 0, 1, 0,
+		1, 1, 0, 0, 1, 0,
+		0, 1, 0, 0, 1, 0,
+		0, 1, 1, 0, 1, 0,
+		
+		// Right
+		0, 0, 1, -1, 0, 0,
+		0, 1, 1, -1, 0, 0,
+		0, 1, 0, -1, 0, 0,
+		0, 1, 0, -1, 0, 0,
+		0, 0, 0, -1, 0, 0,
+		0, 0, 1, -1, 0, 0,
+	
+		// Left
+		1, 0, 1, 1, 0, 0,
+		1, 0, 0, 1, 0, 0,
+		1, 1, 0, 1, 0, 0,
+		1, 1, 0, 1, 0, 0,
+		1, 1, 1, 1, 0, 0,
+		1, 0, 1, 1, 0, 0
+	];
+
+	this.hoverblock = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER,this.hoverblock);
+	gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(cube),gl.STATIC_DRAW);
 }
 
 WLRenderer.prototype.resize =function()
@@ -106,7 +162,9 @@ WLRenderer.prototype.draw = function()
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+	/*
 	gl.uniform3f(this.uLightSpCol, 0.64,0.32,0.16);
+	gl.vertexAttrib3fv(this.aVertexNor,new Float32Array([0,0,0]));
 
 	for(i in world.ground)
 	{
@@ -114,6 +172,7 @@ WLRenderer.prototype.draw = function()
 		gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 12, 0);
 		gl.drawArrays(gl.POINTS,0,world.ground[i].vcount);
 	}
+	*/
 
 	gl.uniform3f(this.uLightSpCol, 0.1, 0.6, 0.1);
 
@@ -133,36 +192,27 @@ WLRenderer.prototype.draw = function()
 
 	gl.uniform3f(this.uLightSpCol, 0.16,0.32,0.64);
 
+	/*
 	gl.bindBuffer(gl.ARRAY_BUFFER,this.line);
 	gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 12, 0);
 	gl.drawArrays(gl.LINES,0,2);
-
-
-	/*
-	for(x=0;x<world.xchunk;x++)
-	{
-		for(y=0;y<world.ychunk;y++)
-		{
-			for(z=0;z<world.zchunk;z++)
-			{
-				var chunk = world.chunks[x][y][z];
-				gl.bindBuffer(gl.ARRAY_BUFFER, chunk.vboTop);
-				gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 24, 0);
-				gl.vertexAttribPointer(this.aVertexNor, 3, gl.FLOAT, false, 24, 12);
-
-				//gl.drawArrays(gl.POINTS,0, chunk.vboTop.vcount);
-
-
-				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,chunk.vboTop.ibo)
-				gl.drawElements(gl.TRIANGLES,chunk.vboTop.icount,gl.UNSIGNED_SHORT,0);
-
-				//gl.bindBuffer(gl.ARRAY_BUFFER, chunk.vboSides);
-				//gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 0, 0);
-				//gl.drawArrays(gl.POINTS,0, chunk.vboSides.vcount);
-			}
-		}
-	}
 	*/
+
+
+	if(world.hover)
+	{
+		var mvMatrix = mat4.set(this.mvMatrix, mat4.create());
+		var neghover = [ world.hover[0], world.hover[2], world.hover[1] ];
+		mat4.translate(mvMatrix,neghover);
+		gl.uniformMatrix4fv(this.uMVMatrix, false, mvMatrix);
+
+		
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.hoverblock);
+		gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 24, 0);
+		gl.vertexAttribPointer(this.aVertexNor, 3, gl.FLOAT, false, 24, 12);
+		gl.drawArrays(gl.TRIANGLES, 0, 36);
+	}
+
 }
 
 WLRenderer.prototype.do_movement = function()
@@ -254,12 +304,24 @@ WLRenderer.prototype.do_movement = function()
 	mat4.rotateX(this.mvMatrix,-this.rotVec[1]);
 	mat4.rotateY(this.mvMatrix,-this.rotVec[0]);
 
-	mat4.translate(this.mvMatrix,vec3.scale(this.camPos,-1,vec3.create()));
+	mat4.translate(this.mvMatrix,vec3.negate(this.camPos,vec3.create()));
 	gl.uniformMatrix4fv(this.uMVMatrix, false, this.mvMatrix);
 }
 
 WLRenderer.prototype.click = function(e)
 {
+	if(e.button == 0)
+	{
+		world.place_block(VOXEL.DIRT);
+	}
+	else
+	{
+		world.hover[2] --;
+		world.place_block(VOXEL.AIR);
+	}
+	this.mousemove(e);
+	this.dirty = true;
+	/*
 	var view = [0,gl.viewportHeight,gl.viewportWidth,-gl.viewportHeight]
 	var ray0 = vec3.unproject([e.clientX,e.clientY,0],this.mvMatrix,this.pMatrix,view,vec3.create());
 	var ray1 = vec3.unproject([e.clientX,e.clientY,1],this.mvMatrix,this.pMatrix,view,vec3.create());
@@ -268,6 +330,7 @@ WLRenderer.prototype.click = function(e)
 	gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([ray0[0],ray0[1],ray0[2],ray1[0],ray1[1],ray1[2]]),gl.STATIC_DRAW);
 
 	this.dirty = true;
+	*/
 
 }
 
@@ -306,6 +369,17 @@ WLRenderer.prototype.mousemove = function(e)
 	if(this.mousedrag)
 	{
 		this.mousepos = [ e.clientX, e.clientY ];
+	}
+	else //TODO: only do this if in block-placing mode.
+	{
+		var view = [0,gl.viewportHeight,gl.viewportWidth,-gl.viewportHeight]
+		var p0 = vec3.unproject([e.clientX,e.clientY,0],this.mvMatrix,this.pMatrix,view,vec3.create());
+		var p1 = vec3.unproject([e.clientX,e.clientY,1],this.mvMatrix,this.pMatrix,view,vec3.create());
+		if( !p0 || !p1 )return;
+		var ray = vec3.subtract(p1,p0);
+		vec3.normalize(ray);
+		world.hover_block([p0[0],p0[2],p0[1]],[ray[0],ray[2],ray[1]]);
+		this.dirty = true;
 	}
 }
 

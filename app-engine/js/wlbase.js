@@ -76,3 +76,64 @@ function start()
 	loading.parentNode.removeChild(loading);
 }
 
+function cubeIntersect(cube,origin,ray)
+{
+	//Finds which x plane (0 or 1), which y plane, which z plane
+	//Finds the distance to intersect with that plane
+	//Picks the lowest distance
+	//Finds the actual intersection point
+	var x,y,z,xnc,ync,znc;
+	if(ray[0]>0)
+	{
+		x = (cube[0]+1-origin[0])/ray[0];
+		xnc = vec3.add([1,0,0],cube);
+	}
+	else
+	{
+		x = (cube[0]-origin[0])/ray[0];
+		xnc = vec3.add([-1,0,0],cube);
+	}
+
+	if(ray[1]>0)
+	{
+		y = (cube[1]+1-origin[1])/ray[1];
+		ync = vec3.add([0,1,0],cube);
+	}
+	else
+	{
+		y = (cube[1]-origin[1])/ray[1];
+		ync = vec3.add([0,-1,0],cube);
+	}
+
+	if(ray[2]>0)
+	{
+		z = (cube[2]+1-origin[2])/ray[2];
+		znc = vec3.add([0,0,1],cube);
+	}
+	else
+	{
+		z = (cube[2]-origin[2])/ray[2];
+		znc = vec3.add([0,0,-1],cube);
+	}
+	var t,nc;
+	if(x < y && x < z)
+	{
+		t = x;
+		nc = xnc;
+	}
+	else if(y < x && y < z)
+	{
+		t = y;
+		nc = ync;
+	}
+	else
+	{
+		t = z;
+		nc = znc;
+	}
+
+	// I = O + tR
+	var inter = vec3.add(vec3.scale(ray,t,vec3.create()),origin);
+	return [nc,inter];
+}
+
