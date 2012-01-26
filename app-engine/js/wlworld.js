@@ -24,6 +24,8 @@ function WLWorld(size)
 	var dirts = new Array();
 	this.ground = new Array();
 	*/
+	
+	var SN = new SimplexNoise();
 
 	var data = new Array();
 	for(x=0;x<this.xchunk * chunksize ;x++)
@@ -46,7 +48,7 @@ function WLWorld(size)
 					/*
 					if(z > size/4+1 && (xp*xp + yp*yp )*co2 * co2 -zp*zp* si2*si2 <= 0)
 					*/
-					if(z > size/4)
+					if(z > size/4 + 1.2*SN.noise(x/8,y/8) )
 					{
 						data[x][y][z] = VOXEL.AIR
 						continue;
