@@ -9,20 +9,12 @@
 
 function WLChunk(x,y,z,data)
 {
-	this.vboTop       = gl.createBuffer();
-	this.vboTop.ibo   = gl.createBuffer();
-	this.vboSides     = gl.createBuffer();
-	this.vboSides.ibo = gl.createBuffer();
-
-	var chunksize = WLChunk.size;
 	this.x = x * chunksize;
 	this.y = y * chunksize;
 	this.z = z * chunksize;
 
 	this.build_verts(data)
 };
-
-WLChunk.size = 16;
 
 WLChunk.prototype.getvoxel = function(x,y,z,data)
 {
@@ -68,7 +60,6 @@ WLChunk.prototype.build_verts = function(data)
 	//Indices will store hashed vertex positions in gl.TRIANGLES order.
 	this.indices = new Array();
 
-	var chunksize = WLChunk.size;
 	var heights = new Array();
 
 
@@ -261,9 +252,6 @@ WLChunk.prototype.build_mesh = function(neighs)
 		arrTop.push(norm[1]);
 		vcount++;
 	}
-	this.vboTop.vcount = vcount;
-	gl.bindBuffer(gl.ARRAY_BUFFER, this.vboTop);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arrTop), gl.STATIC_DRAW);
 
 	var arrTopInd = new Array();
 	//Build Vertex indices
@@ -274,15 +262,22 @@ WLChunk.prototype.build_mesh = function(neighs)
 		arrTopInd.push(vIndices[this.indices[i]]);
 		icount++;
 	}
-	this.vboTop.icount = icount;
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vboTop.ibo);
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(arrTopInd), gl.STATIC_DRAW);
+	if(icount>0)
+	{
+		postMessage({type:IPC.UPSERTMESH,
+					key:      this.x+"|"+this.y+"|"+this.z+"|top",
+					vertices: arrTop,
+					vcount:   vcount,
+					indices:  arrTopInd,
+			        icount:   icount});
+	}
+	else
+	{
+		postMessage({type:IPC.DELETEMESH,
+					key:      this.x+"|"+this.y+"|"+this.z+"|top" });
+	}
 
-	//TODO: sides and bottoms
-	this.vboSides.vcount = 0;
-	gl.bindBuffer(gl.ARRAY_BUFFER, this.vboSides);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(), gl.STATIC_DRAW);
 
-	return icount > 0 || this.vboSides.vcount > 0;
+	//TODO: sides
 }
 

@@ -7,6 +7,51 @@
  *
  */
 
+var gl;
+function initGL(canvas) {
+	try {
+		gl = canvas.getContext("experimental-webgl");
+		gl.canvas = canvas;
+	} catch (e) {
+	}
+	if (!gl) {
+		alert("Could not initialise WebGL, sorry :-(");
+	}
+}
+
+var renderer;
+var world;
+
+// shim layer with setTimeout fallback
+window.requestAnimFrame = (function(){
+  return  window.requestAnimationFrame       || 
+		  window.webkitRequestAnimationFrame || 
+		  window.mozRequestAnimationFrame    || 
+		  window.oRequestAnimationFrame      || 
+		  window.msRequestAnimationFrame     || 
+		  function( callback ){
+			window.setTimeout(callback, 1000 / 60);
+		  };
+})();
+
+function start() 
+{
+	var canvas = document.getElementById("webGL");
+	canvas.width  = canvas.clientWidth;
+	canvas.height = canvas.clientHeight;
+	initGL(canvas);
+	world = new WLWorld(128);
+	renderer = new WLRenderer(world);
+	(function animloop(){
+		  requestAnimFrame(animloop);
+		  renderer.draw();
+		})();
+	var loading = document.getElementById("loading");
+	loading.parentNode.removeChild(loading);
+}
+
+
+
 WLRenderer = function(world) {
 	var fragmentShader = this.getShader("shader-fs");
 	var vertexShader = this.getShader("shader-vs");
@@ -162,42 +207,20 @@ WLRenderer.prototype.draw = function()
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-	/*
-	gl.uniform3f(this.uLightSpCol, 0.64,0.32,0.16);
-	gl.vertexAttrib3fv(this.aVertexNor,new Float32Array([0,0,0]));
-
-	for(i in world.ground)
-	{
-		gl.bindBuffer(gl.ARRAY_BUFFER, world.ground[i]);
-		gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 12, 0);
-		gl.drawArrays(gl.POINTS,0,world.ground[i].vcount);
-	}
-	*/
-
 	gl.uniform3f(this.uLightSpCol, 0.1, 0.6, 0.1);
 
 	for(i in world.meshes)
 	{
 		var mesh = world.meshes[i];
-		gl.bindBuffer(gl.ARRAY_BUFFER, mesh);
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vbo);
 		gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 24, 0);
 		gl.vertexAttribPointer(this.aVertexNor, 3, gl.FLOAT, false, 24, 12);
-
-		//gl.drawArrays(gl.POINTS,0, mesh.vcount);
-
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.ibo)
 		gl.drawElements(gl.TRIANGLES,mesh.icount,gl.UNSIGNED_SHORT,0);
 	}
 
 	gl.uniform3f(this.uLightSpCol, 0.16,0.32,0.64);
-
-	/*
-	gl.bindBuffer(gl.ARRAY_BUFFER,this.line);
-	gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 12, 0);
-	gl.drawArrays(gl.LINES,0,2);
-	*/
-
 
 	if(world.hover)
 	{
@@ -321,17 +344,6 @@ WLRenderer.prototype.click = function(e)
 	}
 	this.mousemove(e);
 	this.dirty = true;
-	/*
-	var view = [0,gl.viewportHeight,gl.viewportWidth,-gl.viewportHeight]
-	var ray0 = vec3.unproject([e.clientX,e.clientY,0],this.mvMatrix,this.pMatrix,view,vec3.create());
-	var ray1 = vec3.unproject([e.clientX,e.clientY,1],this.mvMatrix,this.pMatrix,view,vec3.create());
-
-	gl.bindBuffer(gl.ARRAY_BUFFER,this.line);
-	gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([ray0[0],ray0[1],ray0[2],ray1[0],ray1[1],ray1[2]]),gl.STATIC_DRAW);
-
-	this.dirty = true;
-	*/
-
 }
 
 
