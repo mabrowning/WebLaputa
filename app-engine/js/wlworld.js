@@ -31,17 +31,16 @@ function WLWorld(size)
 			{
 				cos = Math.cos(Math.PI/5)
 				sin = Math.sin(Math.PI/5)
-				co2 = Math.cos(Math.PI/4)
-				si2 = Math.sin(Math.PI/4)
-				xp = x - size/2
-				yp = y - size/2;
+				xp = x - size/2 + SN.noise(20+x/8,30+y/8)
+				yp = y - size/2 + SN.noise(40+x/8,60+y/8)
 				zp = size/4 -z+1 ;
 				if((xp*xp + yp*yp ) * cos * cos -  z *  z * sin * sin  <= 0)
 				{
 					/*
 					if(z > size/4+1 && (xp*xp + yp*yp )*co2 * co2 -zp*zp* si2*si2 <= 0)
 					*/
-					if(z > size/4 + 1.1*SN.noise(x/8,y/8) )
+					var n =SN.noise(x/8,y/8) 
+					if(z > size/4 + n || z<size/8 +n )
 					{
 						data[x][y][z] = VOXEL.AIR
 						continue;
@@ -58,7 +57,8 @@ function WLWorld(size)
 	this.meshes = {};
 	var world = this;
 
-	this.worker = new Worker('js/wlworker.js');
+	//this.worker = new Worker('js/wlworker.js');
+	this.worker =  new WebWorkerShim();
 	this.worker.onmessage = function(e)
 	{
 		e = e.data;
@@ -90,6 +90,7 @@ function WLWorld(size)
 			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, 
 					new Uint16Array(e.indices), gl.STATIC_DRAW);
 			mesh.icount = e.icount;
+			if(renderer) renderer.dirty = true;
 
 			break;
 		case IPC.DELETEMESH:
@@ -99,7 +100,12 @@ function WLWorld(size)
 			break;
 		}
 	}
+	this.worker.onerror = function(e)
+	{
+		console.log("WebWorker error: "+e.filename + " on lineno: "+e.lineno);
+	}
 	this.worker.postMessage({type:IPC.INITDATA, data:data, size:size})
+	
 }
 
 WLWorld.prototype.cubeIntersect =function(cube,origin,ray)
@@ -171,6 +177,7 @@ WLWorld.prototype.onupdateblock = function(x,y,z,type)
 
 WLWorld.prototype.place_block = function(type)
 {
+	if( !this.hover)return;
 	x = this.hover[0];
 	y = this.hover[1];
 	z = this.hover[2];
@@ -186,7 +193,8 @@ WLWorld.prototype.hover_block = function(origin,ray)
 
 	var lx,ly,lz;
 	var count = 0;
-	while(this.getvoxel(x,y,z) == VOXEL.AIR && count < this.xsize*2)
+	var maxcount = this.xsize * 2; //arbitrarily chosen.
+	while(this.getvoxel(x,y,z) == VOXEL.AIR && count < maxcount)
 	{
 		count++
 		lx = x; ly = y; lz = z;
@@ -196,7 +204,14 @@ WLWorld.prototype.hover_block = function(origin,ray)
 		z = c_o[0][2];
 		origin = c_o[1];
 	}
-	this.hover = [lx,ly,lz];
+	if( count == maxcount )
+	{
+		delete this.hover;
+	}
+	else
+	{
+		this.hover = [lx,ly,lz];
+	}
 }
 
 WLWorld.prototype.getvoxel = function(x,y,z)

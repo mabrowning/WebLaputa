@@ -80,7 +80,7 @@ WLRenderer = function(world) {
 	this.uLightDiCol = gl.getUniformLocation(this.program, "uLightDiCol");
 
 	gl.uniform3f(this.uLightPos,     40, 40, 40);
-	gl.uniform3f(this.uLightAmCol,  0.7,0.7,0.6);
+	gl.uniform3f(this.uLightAmCol,  0.3,0.3,0.2);
 	gl.uniform3f(this.uLightSpCol,  1.0,1.0,1.0);
 	gl.uniform3f(this.uLightDiCol,  0.9,0.9,0.8);
 
@@ -207,10 +207,15 @@ WLRenderer.prototype.draw = function()
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-	gl.uniform3f(this.uLightSpCol, 0.1, 0.6, 0.1);
 
 	for(i in world.meshes)
 	{
+		var tok = i.split("|");
+		tok = tok[tok.length -1]
+		if(tok == "top")
+			gl.uniform3f(this.uLightSpCol, 0.1, 0.6, 0.1);
+		else if (tok == "side")
+			gl.uniform3f(this.uLightSpCol, 0.4, 0.4, 0.1);
 		var mesh = world.meshes[i];
 		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vbo);
 		gl.vertexAttribPointer(this.aVertexPos, 3, gl.FLOAT, false, 24, 0);
@@ -376,6 +381,7 @@ WLRenderer.prototype.mousedown = function(e)
 	this.mousemotion = false;
 }
 
+
 WLRenderer.prototype.mousemove = function(e)
 {
 	if(this.mousedrag)
@@ -392,6 +398,13 @@ WLRenderer.prototype.mousemove = function(e)
 		vec3.normalize(ray);
 		world.hover_block([p0[0],p0[2],p0[1]],[ray[0],ray[2],ray[1]]);
 		this.dirty = true;
+var coord = document.getElementById("coord");
+		if(world.hover)
+		{
+			coord.style.top = e.clientY+"px";
+			coord.style.left = e.clientX+"px";
+			coord.innerText = world.hover.join(", ");
+		}
 	}
 }
 

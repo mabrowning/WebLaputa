@@ -7,11 +7,15 @@
  * Licensed under GPL3 or later.
  *
  */
+if(typeof importScripts === 'undefined' )
+{
+	importScripts = function(e){} //shimy
+}
 importScripts('glMatrix-1.2.3.min.js');
 importScripts('wlbase.js');
 importScripts('wlchunk.js');
 
-var world;
+var wlworld;
 
 onmessage = function(e)
 {
@@ -20,18 +24,33 @@ onmessage = function(e)
 	switch(e.type)
 	{
 		case IPC.INITDATA:
-			world = new WLWorldWorker(e.data,e.size);
+			wlworld = new WLWorldWorker(e.data,e.size);
 			break;
 		case IPC.UPDATEDATA:
-			world.onupdateblock(e.x,e.y,e.z,e.voxel);
+			wlworld.onupdateblock(e.x,e.y,e.z,e.voxel);
 			break;
 		default:
 			break;
 	}
 }
 
-function WLWorldWorker(data,size)
+function WebWorkerShim(pair)
 {
+	if(!pair)
+		this.pair = new WebWorkerShim(this)
+	else
+	{
+		WebWorkerShim.postMessage = function(e){pair.onmessage({data:e})}
+		this.pair = pair;
+	}
+	this.postMessage = function(e){this.pair.onmessage({data:e})}
+	this.onmessage = onmessage
+}
+WebWorkerShim.postMessage = postMessage;
+
+function WLWorldWorker(data,size,webworker)
+{
+	wlworld = this;
 	this.xsize = size;
 	this.ysize = size;
 	this.zsize = size;
@@ -42,6 +61,8 @@ function WLWorldWorker(data,size)
 	this.zchunk = Math.floor((size - 1)/chunksize) + 1;
 
 	this.data = data;
+
+	data.heights = new Array();
 
 	var chunk = new Array();
 	for(x=0;x<this.xchunk;x++)
@@ -169,9 +190,6 @@ WLWorldWorker.prototype.onupdateblock = function(x,y,z,type)
 		chunks[i].build_verts(this.data);
 		neighbors = neighbors.concat(this.getneighbors(xc,yc,zc));
 	}
-
-
-
 
 	for( i in chunks)
 	{

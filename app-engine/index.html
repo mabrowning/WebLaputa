@@ -5,8 +5,18 @@
 <script type="text/javascript" src="js/glMatrix-1.2.3.min.js"></script>
 <script type="text/javascript" src="js/perlin-noise-simplex.js"></script>
 <script type="text/javascript" src="js/wlbase.js"></script>
+<!-- Moved to web worker 
+<script type="text/javascript" src="js/wlworker.js"></script>
+<script type="text/javascript" src="js/wlchunk.js"></script>
+<script type="text/javascript" src="js/glMatrix-1.2.3.min.js"></script>
+-->
+<script type="text/javascript" src="js/wlworker.js"></script>
+<script type="text/javascript" src="js/wlchunk.js"></script>
+<script type="text/javascript" src="js/glMatrix-1.2.3.min.js"></script>
+
 <script type="text/javascript" src="js/wlworld.js"></script>
 <script type="text/javascript" src="js/wlrenderer.js"></script>
+
 
 <script id="shader-fs" type="x-shader/x-fragment">
     precision mediump float;
@@ -84,9 +94,10 @@
 	</head>
 	<body style="background-color:#000" oncontextmenu="return false">
 		<canvas id="webGL" style="position:absolute; top: 0px; left:0px; border: none; width:100% ; height: 100%; cursor: crosshair;" >Requires HTML5 (and WebGL)</canvas>
-		<div id="loading" style="color:#fff;position:absolute;top:50%;left:50%;">
+		<div id="loading" style="color:#fff;position:absolute;top:50%;left:50%;color:white;">
 			Loading, please wait!
 		</div>
+		<div id="coord" style="position:absolute; top: 0px; left:0px; color:white"> </div>
 		<script type="text/javascript">
 			window.setTimeout(start,10);
 		</script>
