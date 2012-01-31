@@ -329,7 +329,7 @@ WLChunk.prototype.build_mesh = function(neighs)
 	}
 	if(icount>0)
 	{
-		WebWorkerShim.postMessage({type:IPC.UPSERTMESH,
+		postMessage({type:IPC.UPSERTMESH,
 					key:      this.x+"|"+this.y+"|"+this.z+"|top",
 					vertices: arrTop,
 					vcount:   vcount,
@@ -338,7 +338,7 @@ WLChunk.prototype.build_mesh = function(neighs)
 	}
 	else
 	{
-		WebWorkerShim.postMessage({type:IPC.DELETEMESH,
+		postMessage({type:IPC.DELETEMESH,
 					key:      this.x+"|"+this.y+"|"+this.z+"|top" });
 	}
 
@@ -382,7 +382,7 @@ WLChunk.prototype.build_mesh = function(neighs)
 	}
 	if(icount>0)
 	{
-		WebWorkerShim.postMessage({type:IPC.UPSERTMESH,
+		postMessage({type:IPC.UPSERTMESH,
 					key:      this.x+"|"+this.y+"|"+this.z+"|side",
 					vertices: arrSides,
 					vcount:   vcount,
@@ -391,7 +391,7 @@ WLChunk.prototype.build_mesh = function(neighs)
 	}
 	else
 	{
-		WebWorkerShim.postMessage({type:IPC.DELETEMESH,
+		postMessage({type:IPC.DELETEMESH,
 					key:      this.x+"|"+this.y+"|"+this.z+"|side" });
 	}
 }

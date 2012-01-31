@@ -36,6 +36,10 @@ window.requestAnimFrame = (function(){
 
 function start() 
 {
+	var loading = document.getElementById("loading");
+	
+	loading.innerHTML +="<br>Initializing WebGL..."
+
 	var canvas = document.getElementById("webGL");
 	canvas.width  = canvas.clientWidth;
 	canvas.height = canvas.clientHeight;
@@ -46,8 +50,6 @@ function start()
 		  requestAnimFrame(animloop);
 		  renderer.draw();
 		})();
-	var loading = document.getElementById("loading");
-	loading.parentNode.removeChild(loading);
 }
 
 

@@ -36,7 +36,8 @@ IPC = {
 	INITDATA:   0,
 	UPDATEDATA: 1,
 	UPSERTMESH: 2,
-	DELETEMESH: 3
+	DELETEMESH: 3,
+	PROGRESS  : 4
 }
 
 var chunksize = 32;

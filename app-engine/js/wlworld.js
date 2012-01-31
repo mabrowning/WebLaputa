@@ -17,6 +17,10 @@ function WLWorld(size)
 	this.ychunk = Math.floor((size - 1)/chunksize) + 1;
 	this.zchunk = Math.floor((size - 1)/chunksize) + 1;
 
+	var loading = document.getElementById("loading");
+	
+	loading.innerHTML +="<br>Generating terrain..."
+
 	//TODO: eventually, this will come from the network.
 	var SN = new SimplexNoise();
 
@@ -52,13 +56,14 @@ function WLWorld(size)
 			}
 		}
 	}
+	loading.innerHTML +="<br>Dispatching worker thread..."
 
 	this.data = data;
 	this.meshes = {};
 	var world = this;
 
-	//this.worker = new Worker('js/wlworker.js');
-	this.worker =  new WebWorkerShim();
+	this.worker = new Worker('js/wlworker.js');
+	//this.worker =  new WebWorkerShim();
 	this.worker.onmessage = function(e)
 	{
 		e = e.data;
@@ -91,10 +96,18 @@ function WLWorld(size)
 					new Uint16Array(e.indices), gl.STATIC_DRAW);
 			mesh.icount = e.icount;
 			if(renderer) renderer.dirty = true;
+			var loading = document.getElementById("loading");
+			if(loading)
+				loading.parentNode.removeChild(loading);
 
 			break;
 		case IPC.DELETEMESH:
 			delete world.meshes[e.key]
+			break;
+		case IPC.PROGRESS:
+			var loading = document.getElementById("loading");
+			if(loading)
+				loading.innerHTML +="<br>"+ e.text;
 			break;
 		default:
 			break;

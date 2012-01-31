@@ -64,6 +64,8 @@ function WLWorldWorker(data,size,webworker)
 
 	data.heights = new Array();
 
+	postMessage({type:IPC.PROGRESS,text:"Splitting world into chunks..."})
+
 	var chunk = new Array();
 	for(x=0;x<this.xchunk;x++)
 	{
@@ -77,6 +79,7 @@ function WLWorldWorker(data,size,webworker)
 			}
 		}
 	}
+	postMessage({type:IPC.PROGRESS,text:"Building mesh..."})
 	this.chunks = chunk;
 	for(x=0;x<this.xchunk;x++)
 		for(y=0;y<this.ychunk;y++)
