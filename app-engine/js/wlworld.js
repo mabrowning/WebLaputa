@@ -7,14 +7,16 @@
  *
  */
 
-function WLWorld(key)
+function WLWorld(seed)
 {
-	if(!key)key=""
-	this.key = key;
+	if(!seed)seed=""
+	this.seed = seed;
 
 	this.data = new Array();
 	this.meshes = {};
 	var world = this;
+
+	this.chunks = {}
 
 	//Set up webworker. We'll then fetch the current world
 	//from the server and pass it in.
@@ -60,9 +62,16 @@ function WLWorld(key)
 			delete world.meshes[e.key]
 			break;
 		case IPC.PROGRESS:
-			var loading = document.getElementById("loading");
-			if(loading)
-				loading.innerHTML +="<br>"+ e.text;
+			if(e.text)
+			{
+				var loading = document.getElementById("loading");
+				if(loading) loading.innerHTML +="<br>"+ e.text;
+				console.log(e.text);
+			}
+			if(e.data)
+			{
+				console.log(e.data);
+			}
 			break;
 		default:
 			break;
@@ -73,12 +82,14 @@ function WLWorld(key)
 		console.log("WebWorker error: "+e.filename + " on lineno: "+e.lineno);
 	}
 
+	this.chunk_load_queue = []
+
 
 	var loading = document.getElementById("loading");
 	loading.innerHTML +="<br>Downloading world...";
 	//Start downloading the world.
 	var request = new XMLHttpRequest();
-	request.open("GET","/world/"+key,true);
+	request.open("GET","/join/"+seed,true);
 	request.onreadystatechange = function()
 	{
 		if(this.readyState!=4)return;
@@ -88,13 +99,21 @@ function WLWorld(key)
 			loading.innerHTML +="<br>Downloading world Failed!";
 			return;
 		}
-		data = JSON.parse(this.responseText);
-		if(data)
+		var data = JSON.parse(this.responseText);
+		if( data && data.success )
 		{
-			world.data = data;
-			world.worker.postMessage(
-					{type:IPC.INITDATA, 
-					data:data})
+			world.seed  = data.seed
+
+			world.chunk_load_queue.push([0,0,0])
+			world.chunk_load_queue.push([1,0,0])
+			world.chunk_load_queue.push([0,1,0])
+			world.chunk_load_queue.push([1,1,0])
+			world.chunk_load_queue.push([0,0,1])
+			world.chunk_load_queue.push([1,0,1])
+			world.chunk_load_queue.push([0,1,1])
+			world.chunk_load_queue.push([1,1,1])
+
+			world.process_chunk_load()
 		}
 		else
 		{
@@ -105,8 +124,66 @@ function WLWorld(key)
 
 
 
-	//this.worker.postMessage({type:IPC.INITDATA, data:data, size:size})
+	this.worker.postMessage({type:IPC.INITDATA, data:[]})
 	
+}
+
+WLWorld.prototype.process_chunk_load = function()
+{
+	xyz = this.chunk_load_queue.shift()
+	if( !xyz )return;
+	this.chunks[xyz.join("|")] = true;
+	var request = new XMLHttpRequest();
+	request.x =xyz[0]
+	request.y =xyz[1]
+	request.z =xyz[2]
+	request.open("POST","/get",true);
+	request.onreadystatechange = function()
+	{
+		if(this.readyState!=4)return;
+
+		if(this.status != 200)
+		{
+			return;
+		}
+		var data = JSON.parse(this.responseText);
+		world.addchunk(this.x,this.y,this.z,data);
+
+		world.process_chunk_load();
+
+	}
+	var formData = new FormData();
+	formData.append("seed",this.seed);
+	formData.append("x",xyz[0]);
+	formData.append("y",xyz[1]);
+	formData.append("z",xyz[2]);
+	
+	request.send(formData);
+}
+WLWorld.prototype.addchunk = function(x,y,z,data)
+{
+	var xb = x*chunksize,
+		yb = y*chunksize,
+		zb = z*chunksize;
+	//x,y,z are chunk indices, and data indices are chunk relative
+	for(var xi = 0; xi < data.length ; xi++)
+	{
+		var xc = xb + xi;
+		if(typeof this.data[xc] === 'undefined' )
+			this.data[xc] = []
+		for(var yi = 0; yi < data[xi].length; yi++ )
+		{
+			var yc = yb + yi;
+			if(typeof this.data[xc][yc] === 'undefined' )
+				this.data[xc][yc] = []
+			for(var zi = 0; zi < data[xi][yi].length; zi++ )
+			{
+				var zc = zb + zi;
+				this.data[xc][yc][zc] = data[xi][yi][zi];
+			}
+		}
+	}
+	world.worker.postMessage({ type:IPC.NEWCHUNK, x:x, y:y, z:z, data:data})
 }
 
 WLWorld.prototype.cubeIntersect =function(cube,origin,ray)
@@ -184,6 +261,18 @@ WLWorld.prototype.place_block = function(type)
 	z = this.hover[2];
 	this.data[x][y][z] = type;
 	this.onupdateblock(x,y,z,type);
+}
+
+WLWorld.prototype.onmove = function(x,y,z)
+{
+	var xc = Math.floor(x/ chunksize);
+	var yc = Math.floor(y/ chunksize);
+	var zc = Math.floor(z/ chunksize);
+	if(!this.chunks[xc+"|"+yc+"|"+zc])
+	{
+		world.chunk_load_queue.push([xc,yc,zc])
+		world.process_chunk_load()
+	}
 }
 
 WLWorld.prototype.hover_block = function(origin,ray)

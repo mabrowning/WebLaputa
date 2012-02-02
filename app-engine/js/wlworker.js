@@ -108,7 +108,7 @@ function WLWorldWorker(data,webworker)
 	postMessage({type:IPC.PROGRESS,text:"Finished loading world. Done!"})
 }
 
-WLWorldWorker.addchunk = function(x,y,z,data)
+WLWorldWorker.prototype.addchunk = function(x,y,z,data)
 {
 	var xb = x*chunksize,
 		yb = y*chunksize,
@@ -138,14 +138,23 @@ WLWorldWorker.addchunk = function(x,y,z,data)
 	//Possibly 
 	if(typeof this.chunks[x] === 'undefined')
 		this.chunks[x] = new Array();
-	if(typeof this.chunk[x][y] === 'undefined')
+	if(typeof this.chunks[x][y] === 'undefined')
 		this.chunks[x][y] = new Array();
 
-	var chunk = new WLChunk(x,y,z,data);
+	var chunk = new WLChunk(x,y,z,this.data);
 	this.chunks[x][y][z] = chunk;
 
-	var neighbors = this.getneighbors(x,y,z);
-	chunk.build_mesh(neighbors);
+	var neighs = this.getneighbors(x,y,z);
+	for(var n=0; n<neighs.length;n++)
+	{
+		neighs[n].build_verts(this.data);
+	}
+	var neighs = this.getneighbors(x,y,z);
+	for(var n=0; n<neighs.length;n++)
+	{
+		neighs[n].build_mesh(neighs.slice(0));
+	}
+
 
 }
 

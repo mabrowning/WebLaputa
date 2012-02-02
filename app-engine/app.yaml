@@ -14,3 +14,8 @@ handlers:
   static_dir: css
 - url: /.*
   script: server.app
+
+builtins:
+- deferred: on
+inbound_services:
+- channel_presence

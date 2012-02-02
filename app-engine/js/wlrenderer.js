@@ -327,6 +327,7 @@ WLRenderer.prototype.do_movement = function()
 	{
 		vec3.scale(move,-0.05*millielapsed);
 		vec3.add(this.camPos,move);
+		world.onmove(this.camPos[0],this.camPos[2],this.camPos[1]);
 	}
 
 	mat4.identity(this.mvMatrix);

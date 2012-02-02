@@ -32,6 +32,12 @@ WLChunk.prototype.getvoxel = function(x,y,z,data)
 WLChunk.prototype.build_verts = function(data)
 {
 	var heights = data.heights;
+	if( typeof heights === 'undefined')
+	{
+		heights = new Array();
+		data.heights = heights;
+	}
+
 
 	//xi, yi and zi in terms of voxels index IN this chunk.
 	//x , y  and z  in terms of global voxel position.
