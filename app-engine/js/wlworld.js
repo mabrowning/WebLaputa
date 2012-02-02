@@ -7,63 +7,18 @@
  *
  */
 
-function WLWorld(size)
+function WLWorld(key)
 {
-	this.xsize = size;
-	this.ysize = size;
-	this.zsize = size;
+	if(!key)key=""
+	this.key = key;
 
-	this.xchunk = Math.floor((size - 1)/chunksize) + 1;
-	this.ychunk = Math.floor((size - 1)/chunksize) + 1;
-	this.zchunk = Math.floor((size - 1)/chunksize) + 1;
-
-	var loading = document.getElementById("loading");
-	
-	loading.innerHTML +="<br>Generating terrain..."
-
-	//TODO: eventually, this will come from the network.
-	var SN = new SimplexNoise();
-
-	var data = new Array();
-	for(x=0;x<this.xchunk * chunksize ;x++)
-	{
-		data[x] = new Array();
-		for(y=0;y<this.ychunk * chunksize;y++)
-		{
-			data[x][y] = new Array();
-			for(z=0;z<this.zchunk * chunksize;z++)
-			{
-				cos = Math.cos(Math.PI/5)
-				sin = Math.sin(Math.PI/5)
-				xp = x - size/2 + SN.noise(20+x/8,30+y/8)
-				yp = y - size/2 + SN.noise(40+x/8,60+y/8)
-				zp = size/4 -z+1 ;
-				if((xp*xp + yp*yp ) * cos * cos -  z *  z * sin * sin  <= 0)
-				{
-					/*
-					if(z > size/4+1 && (xp*xp + yp*yp )*co2 * co2 -zp*zp* si2*si2 <= 0)
-					*/
-					var n =SN.noise(x/8,y/8) 
-					if(z > size/4 + n || z<size/8 +n )
-					{
-						data[x][y][z] = VOXEL.AIR
-						continue;
-					}
-						data[x][y][z] = VOXEL.DIRT;
-					}
-				else
-					data[x][y][z] = VOXEL.AIR
-			}
-		}
-	}
-	loading.innerHTML +="<br>Dispatching worker thread..."
-
-	this.data = data;
+	this.data = new Array();
 	this.meshes = {};
 	var world = this;
 
+	//Set up webworker. We'll then fetch the current world
+	//from the server and pass it in.
 	this.worker = new Worker('js/wlworker.js');
-	//this.worker =  new WebWorkerShim();
 	this.worker.onmessage = function(e)
 	{
 		e = e.data;
@@ -117,7 +72,40 @@ function WLWorld(size)
 	{
 		console.log("WebWorker error: "+e.filename + " on lineno: "+e.lineno);
 	}
-	this.worker.postMessage({type:IPC.INITDATA, data:data, size:size})
+
+
+	var loading = document.getElementById("loading");
+	loading.innerHTML +="<br>Downloading world...";
+	//Start downloading the world.
+	var request = new XMLHttpRequest();
+	request.open("GET","/world/"+key,true);
+	request.onreadystatechange = function()
+	{
+		if(this.readyState!=4)return;
+
+		if(this.status != 200)
+		{
+			loading.innerHTML +="<br>Downloading world Failed!";
+			return;
+		}
+		data = JSON.parse(this.responseText);
+		if(data)
+		{
+			world.data = data;
+			world.worker.postMessage(
+					{type:IPC.INITDATA, 
+					data:data})
+		}
+		else
+		{
+			loading.innerHTML +="<br>Downloading world Failed!";
+		}
+	}
+	request.send();
+
+
+
+	//this.worker.postMessage({type:IPC.INITDATA, data:data, size:size})
 	
 }
 
@@ -206,7 +194,7 @@ WLWorld.prototype.hover_block = function(origin,ray)
 
 	var lx,ly,lz;
 	var count = 0;
-	var maxcount = this.xsize * 2; //arbitrarily chosen.
+	var maxcount = 128; //Maximum distance away
 	while(this.getvoxel(x,y,z) == VOXEL.AIR && count < maxcount)
 	{
 		count++

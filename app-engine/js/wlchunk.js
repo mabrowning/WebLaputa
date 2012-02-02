@@ -78,16 +78,20 @@ WLChunk.prototype.build_verts = function(data)
 						//Find closest height in this direction
 						for(h = z+1;h>=z-1;h--)
 						{
-							if( typeof hi[h] !== 'undefined')
-							{
-								neigh = hi[h];
-								break;
-							}
+							try{
+								if( typeof hi[h] !== 'undefined')
+								{
+									neigh = hi[h];
+									break;
+								}
+							}catch(err){}
 						}
 						
 						if( neigh )
 						{
-							hs[xy[2]] = neigh; //memoize h's so we can update their verts after computing
+							//memoize h's so we can update their 
+							//verts after computing
+							hs[xy[2]] = neigh; 
 							if(!edge)
 							{
 								count++;
@@ -113,8 +117,8 @@ WLChunk.prototype.build_verts = function(data)
 		}
 	}
 
-	//norms Will store hashed verex positions mapping to their unnormalized
-	//normals ;)
+	//norms Will store hashed verex positions mapping to their 
+	//unnormalized normals ;)
 	this.norms = {}; 
 	this.sidenorms = [{},{},{},{},{}] //North, South, East, West, Bottom
 
@@ -129,40 +133,62 @@ WLChunk.prototype.build_verts = function(data)
 	{
 		for(y=this.y; y<(this.y + chunksize); y++)
 		{
-			var pilar = (this.getvoxel(x,y,this.z+chunksize-1,data) != VOXEL.AIR);
+			var pilar = (this.getvoxel(x,y,this.z+chunksize-1,data)
+					!= VOXEL.AIR);
 			for(z=(this.z+chunksize-1); z>=this.z-1; z--)
 			{
 				if(pilar)
 				{
-					pilar = (this.getvoxel(x,y,z-1,data) != VOXEL.AIR); //If we've reached an air block, we'll no longer be in a pilar
+					//If we've reached an air block, 
+					//we'll no longer be in a pilar
+					pilar = (this.getvoxel(x,y,z-1,data) != VOXEL.AIR); 
 					if(!pilar)
 						this.addface(x,y,z,4);
-					if(this.getvoxel(x,y+1,z,data) == VOXEL.AIR )this.addface(x,y,z,0);
-					if(this.getvoxel(x,y-1,z,data) == VOXEL.AIR )this.addface(x,y,z,1);
-					if(this.getvoxel(x+1,y,z,data) == VOXEL.AIR )this.addface(x,y,z,2);
-					if(this.getvoxel(x-1,y,z,data) == VOXEL.AIR )this.addface(x,y,z,3);
+					if(this.getvoxel(x,y+1,z,data) == VOXEL.AIR )
+						this.addface(x,y,z,0);
+					if(this.getvoxel(x,y-1,z,data) == VOXEL.AIR )
+						this.addface(x,y,z,1);
+					if(this.getvoxel(x+1,y,z,data) == VOXEL.AIR )
+						this.addface(x,y,z,2);
+					if(this.getvoxel(x-1,y,z,data) == VOXEL.AIR )
+						this.addface(x,y,z,3);
 				}
 				if(z<this.z)break;
 
 				if( typeof heights[x][y][z] === 'undefined')
 					continue;
-				pilar = (this.getvoxel(x,y,z-1,data) != VOXEL.AIR); //If we've reached an air block, we'll no longer be in a pilar
-				//This heightmap has neighbors... make sure we don't 
-				//draw those
 				
+				//If we've reached an air block, 
+				//we'll no longer be in a pilar
+				pilar = (this.getvoxel(x,y,z-1,data) != VOXEL.AIR); 
+
+
 				var xp = [x-1,x,x-1,x,x-0.5];
 				var yp = [y-1,y-1,y,y,y-0.5];
 				var xp = [x,x+1,x,x+1,x+0.5];
 				var yp = [y,y,y+1,y+1,y+0.5];
-				var zp = heights[x][y][z].slice(0);
+				var zp = heights[x][y][z].slice(0); //copy
 
 
+				var edge = false;
 				for( i in zp )
 				{
 					//quick and dirty fix
 					if(zp[i] === false)
+					{
+						edge = true;
 						zp[i] = z-1;
+					}
+					else if(zp[i] < z-0.9)
+					{
+						edge = true;
+					}
 				}
+				if(false)
+					for( i in zp )
+						if(zp[i] > z)
+							zp[i] = z;
+
 				zp[4] = 0.25 * ( zp[0] + zp[1] + zp[2] + zp[3] )
 				
 
@@ -258,7 +284,7 @@ var facenorms = [
 	[ 0, 0,-1],//south
 	[ 1, 0, 0],//east
 	[-1, 0 ,0],//west
-	[  ,-1 ,0]]//bottom
+	[ 0,-1 ,0]]//bottom
 
 WLChunk.prototype.addnorm = function(norms,pos,norm)
 {
@@ -323,7 +349,8 @@ WLChunk.prototype.build_mesh = function(neighs)
 	var icount = 0;
 	for( i in this.topIndices )
 	{
-		//Each ind is a hashed vertex. The mapping from hash to vertex index is vIndices
+		//Each ind is a hashed vertex. 
+		//The mapping from hash to vertex index is vIndices
 		arrTopInd.push(vIndices[this.topIndices[i]]);
 		icount++;
 	}
@@ -369,13 +396,14 @@ WLChunk.prototype.build_mesh = function(neighs)
 			arrSides.push(y);
 			arrSides.push(norm[0])
 			arrSides.push(norm[1])
-			arrSides.push(norm[2])
+			arrSides.push(norm[2]) //0,1,2 is correct
 			vcount++;
 		}
 
 		for( i in this.sideIndices[face] )
 		{
-			//Each ind is a hashed vertex. The mapping from hash to vertex index is vIndices
+			//Each ind is a hashed vertex. 
+			//The mapping from hash to vertex index is vIndices
 			arrSidesInd.push(vIndices[this.sideIndices[face][i]]);
 			icount++;
 		}

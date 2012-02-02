@@ -24,7 +24,10 @@ onmessage = function(e)
 	switch(e.type)
 	{
 		case IPC.INITDATA:
-			wlworld = new WLWorldWorker(e.data,e.size);
+			wlworld = new WLWorldWorker(e.data);
+			break;
+		case IPC.NEWCHUNK:
+			wlworld.addchunk(e.x,e.y,e.z,e.data)
 			break;
 		case IPC.UPDATEDATA:
 			wlworld.onupdateblock(e.x,e.y,e.z,e.voxel);
@@ -48,17 +51,9 @@ function WebWorkerShim(pair)
 }
 WebWorkerShim.postMessage = postMessage;
 
-function WLWorldWorker(data,size,webworker)
+function WLWorldWorker(data,webworker)
 {
 	wlworld = this;
-	this.xsize = size;
-	this.ysize = size;
-	this.zsize = size;
-
-
-	this.xchunk = Math.floor((size - 1)/chunksize) + 1;
-	this.ychunk = Math.floor((size - 1)/chunksize) + 1;
-	this.zchunk = Math.floor((size - 1)/chunksize) + 1;
 
 	this.data = data;
 
@@ -67,13 +62,22 @@ function WLWorldWorker(data,size,webworker)
 	postMessage({type:IPC.PROGRESS,text:"Splitting world into chunks..."})
 
 	var chunk = new Array();
-	for(x=0;x<this.xchunk;x++)
+	var xchunk = Math.floor((data.length - 1)/chunksize) + 1;
+	for(x=0;x<xchunk;x++)
 	{
+		var datax = data[x*chunksize]
+		if(typeof datax === 'undefined')continue;
+
+		var ychunk = Math.floor((datax.length - 1)/chunksize) + 1;
 		chunk[x] = new Array();
-		for(y=0;y<this.ychunk;y++)
+		for(y=0;y<ychunk;y++)
 		{
+			var datay = datax[y*chunksize]
+			if(typeof datay === 'undefined')continue;
+
+			var zchunk = Math.floor((datay.length - 1)/chunksize) + 1;
 			chunk[x][y] = new Array();
-			for(z=0;z<this.zchunk;z++)
+			for(z=0;z<zchunk;z++)
 			{
 				chunk[x][y][z] = new WLChunk(x,y,z,data);
 			}
@@ -81,13 +85,68 @@ function WLWorldWorker(data,size,webworker)
 	}
 	postMessage({type:IPC.PROGRESS,text:"Building mesh..."})
 	this.chunks = chunk;
-	for(x=0;x<this.xchunk;x++)
-		for(y=0;y<this.ychunk;y++)
-			for(z=0;z<this.zchunk;z++)
+
+	for(x=0;x<xchunk;x++)
+	{
+		var chunkx = chunk[x]
+		if(typeof chunkx === 'undefined')continue;
+
+		var ychunk = chunkx.length;
+		for(y=0;y<ychunk;y++)
+		{
+			var chunky = chunkx[y];
+			if(typeof chunky === 'undefined')continue;
+
+			var zchunk = chunky.length;
+			for(z=0;z<zchunk;z++)
 			{
 				var neighbors = this.getneighbors(x,y,z);
-				chunk[x][y][z].build_mesh(neighbors);
+				chunky[z].build_mesh(neighbors);
 			}
+		}
+	}
+	postMessage({type:IPC.PROGRESS,text:"Finished loading world. Done!"})
+}
+
+WLWorldWorker.addchunk = function(x,y,z,data)
+{
+	var xb = x*chunksize,
+		yb = y*chunksize,
+		zb = z*chunksize;
+	//x,y,z are chunk indices, and data indices are chunk relative
+	for(var xi = 0; xi < data.length ; xi++)
+	{
+		var xc = xb + xi;
+		if(typeof this.data[xc] === 'undefined' )
+			this.data[xc] = []
+		for(var yi = 0; yi < data[xi].length; yi++ )
+		{
+			var yc = yb + yi;
+			if(typeof this.data[xc][yc] === 'undefined' )
+				this.data[xc][yc] = []
+			for(var zi = 0; zi < data[xi][yi].length; zi++ )
+			{
+				var zc = zb + zi;
+				this.data[xc][yc][zc] = data[xi][yi][zi];
+			}
+		}
+	}
+
+
+	//Add the new chunk, after having updated the data array
+	
+	//Possibly 
+	if(typeof this.chunks[x] === 'undefined')
+		this.chunks[x] = new Array();
+	if(typeof this.chunk[x][y] === 'undefined')
+		this.chunks[x][y] = new Array();
+
+	var chunk = new WLChunk(x,y,z,data);
+	this.chunks[x][y][z] = chunk;
+
+	var neighbors = this.getneighbors(x,y,z);
+	chunk.build_mesh(neighbors);
+
 }
 
 WLWorldWorker.prototype.addneighbor = function(neighs,x,y,z)

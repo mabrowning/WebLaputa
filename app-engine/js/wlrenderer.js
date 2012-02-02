@@ -44,7 +44,7 @@ function start()
 	canvas.width  = canvas.clientWidth;
 	canvas.height = canvas.clientHeight;
 	initGL(canvas);
-	world = new WLWorld(128);
+	world = new WLWorld();
 	renderer = new WLRenderer(world);
 	(function animloop(){
 		  requestAnimFrame(animloop);
@@ -98,9 +98,9 @@ WLRenderer = function(world) {
 
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);
 	gl.enable(gl.DEPTH_TEST);
-	//gl.enable(gl.CULL_FACE);
-	//gl.cullFace(gl.BACK);
-	//gl.frontFace(gl.CW);
+	gl.enable(gl.CULL_FACE);
+	gl.cullFace(gl.BACK);
+	gl.frontFace(gl.CW);
 
 	this.world = world;
 
@@ -116,7 +116,7 @@ WLRenderer = function(world) {
 	window.addEventListener  ("resize",    function(){that.resize()},      false);
 
 
-	this.camPos.set([0,world.xsize,world.xsize]);
+	this.camPos.set([0,64,64]);
 	this.rotVec.set([-0.92, -0.66, 0]); //chosen arbitrarily by looking a good view.
 
 	this.tick = new Date().getTime();
@@ -132,51 +132,51 @@ WLRenderer = function(world) {
 	var cube = [
 		// Top
 		0, 0, 1, 0, 0, 1, 
+		1, 1, 1, 0, 0, 1, 
 		1, 0, 1, 0, 0, 1, 
 		1, 1, 1, 0, 0, 1, 
-		1, 1, 1, 0, 0, 1, 
-		0, 1, 1, 0, 0, 1, 
 		0, 0, 1, 0, 0, 1, 
+		0, 1, 1, 0, 0, 1, 
 		
 		// Bottom
 		0, 0, 0, 0, 0, -1,
+		1, 1, 0, 0, 0, -1,
 		0, 1, 0, 0, 0, -1,
 		1, 1, 0, 0, 0, -1,
-		1, 1, 0, 0, 0, -1,
-		1, 0, 0, 0, 0, -1,
 		0, 0, 0, 0, 0, -1,
+		1, 0, 0, 0, 0, -1,
 		
 		// Front 
 		0, 0, 1, 0, -1, 0,
+		1, 0, 0, 0, -1, 0,
 		0, 0, 0, 0, -1, 0,
 		1, 0, 0, 0, -1, 0,
-		1, 0, 0, 0, -1, 0,
-		1, 0, 1, 0, -1, 0,
 		0, 0, 1, 0, -1, 0,
+		1, 0, 1, 0, -1, 0,
 		
 		// Rear	 
 		0, 1, 1, 0, 1, 0,
+		1, 1, 0, 0, 1, 0,
 		1, 1, 1, 0, 1, 0,
 		1, 1, 0, 0, 1, 0,
-		1, 1, 0, 0, 1, 0,
-		0, 1, 0, 0, 1, 0,
 		0, 1, 1, 0, 1, 0,
+		0, 1, 0, 0, 1, 0,
 		
 		// Right
 		0, 0, 1, -1, 0, 0,
+		0, 1, 0, -1, 0, 0,
 		0, 1, 1, -1, 0, 0,
 		0, 1, 0, -1, 0, 0,
-		0, 1, 0, -1, 0, 0,
-		0, 0, 0, -1, 0, 0,
 		0, 0, 1, -1, 0, 0,
+		0, 0, 0, -1, 0, 0,
 	
 		// Left
 		1, 0, 1, 1, 0, 0,
+		1, 1, 0, 1, 0, 0,
 		1, 0, 0, 1, 0, 0,
 		1, 1, 0, 1, 0, 0,
-		1, 1, 0, 1, 0, 0,
-		1, 1, 1, 1, 0, 0,
-		1, 0, 1, 1, 0, 0
+		1, 0, 1, 1, 0, 0,
+		1, 1, 1, 1, 0, 0
 	];
 
 	this.hoverblock = gl.createBuffer();

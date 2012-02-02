@@ -87,11 +87,17 @@
         vTransformedNormal = vec3(uMVMatrix * vec4(aVertexNormal,0.0));
     }
 </script>
+<script type="text/javascript">
+	window.onerror = function(){
+		var loading = document.getElementById("loading");
+		loading.innerHTML+="<br>Javascript error! Loading failed..."
+	}
+</script>
 	</head>
-	<body style="background-color:#000" oncontextmenu="return false">
+	<body style="background-color:#000; overflow:hidden;" oncontextmenu="return false">
 		<canvas id="webGL" style="position:absolute; top: 0px; left:0px; border: none; width:100% ; height: 100%; cursor: crosshair;" >Requires HTML5 (and WebGL)</canvas>
 		<div id="loading" style="color:#fff;position:absolute;top:50%;left:50%;color:white;">
-			Loading, please wait!
+			Loading, please wait...
 		</div>
 		<div id="coord" style="position:absolute; top: 0px; left:0px; color:white"> </div>
 		<script type="text/javascript">

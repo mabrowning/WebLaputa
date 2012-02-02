@@ -33,11 +33,12 @@ for(blk in BLOCKS)
 }
 
 IPC = {
-	INITDATA:   0,
+	INITDATA  : 0,
 	UPDATEDATA: 1,
 	UPSERTMESH: 2,
 	DELETEMESH: 3,
-	PROGRESS  : 4
+	PROGRESS  : 4,
+	NEWCHUNK  : 5
 }
 
 var chunksize = 32;

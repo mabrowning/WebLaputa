@@ -20,7 +20,8 @@ class SimplexNoise():
         
         # This makes sure the seed is good and randomized
         # as sampling may not do so robustly
-        self.seed = randHash(seed)
+        #self.seed = randHash(seed)
+        self.seed = seed
         self.d = dimensions
 
        
@@ -96,8 +97,8 @@ class SimplexNoise():
         # shuffle the vectors using self.seed
         r=random.Random()
         r.seed(self.seed)
+        self.seed = r.randint(0,512)
         r.shuffle(self.vecs)
-        random.shuffle(self.vecs)
         
         self.vecCount=len(self.vecs)
         
